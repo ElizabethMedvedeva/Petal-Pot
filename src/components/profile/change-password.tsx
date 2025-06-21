@@ -56,7 +56,6 @@ export function ChangePasswordForm({
   const handleCurrentBlur: React.FocusEventHandler<
     HTMLInputElement
   > = async () => {
-    // ждем результат валидации
     const { isValid, error } = await validateCurrentPassword(
       customerId,
       form.currentPassword
@@ -119,6 +118,7 @@ export function ChangePasswordForm({
               id="currentPassword"
               name="currentPassword"
               type={showCurrent ? 'text' : 'password'}
+              autoComplete="current-password"
               className="pr-10"
               value={form.currentPassword}
               onChange={handleChange('currentPassword')}
@@ -148,6 +148,7 @@ export function ChangePasswordForm({
               id="newPassword"
               name="newPassword"
               type={showNew ? 'text' : 'password'}
+              autoComplete="new-password"
               className="pr-10"
               value={form.newPassword}
               onChange={handleChange('newPassword')}
@@ -176,6 +177,7 @@ export function ChangePasswordForm({
               id="confirmPassword"
               name="confirmPassword"
               type={showConfirm ? 'text' : 'password'}
+              autoComplete="new-password"
               className="pr-10"
               value={form.confirmPassword}
               onChange={handleChange('confirmPassword')}
