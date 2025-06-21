@@ -49,7 +49,7 @@ export function CartList({
     changeQuantity(lineItemId, quantity);
   };
   return (
-    <div className="flex items-start justify-between w-full max-w-[1340px] mx-auto gap-6 ">
+    <div className="flex items-start justify-between w-full max-w-[1340px] mx-auto gap-6 flex-col lg:flex-row ">
       <div className="flex-1 border rounded-sm">
         {productsInCart.length > 0 && (
           <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 font-semibold bg-gray-100 p-2 rounded-t text-center">
@@ -138,7 +138,7 @@ export function CartList({
             ) : (
               <button
                 onClick={() => setIsPromoCodeVisible(true)}
-                className="text-gray-400 border-none mt-4 text-sm"
+                className="border-none my-3 text-sm underline"
               >
                 Have a coupon?
               </button>
