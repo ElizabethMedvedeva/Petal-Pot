@@ -81,12 +81,12 @@ export function ChangePasswordForm({
       if (msg.includes('Invalid current password')) {
         setErrors((prev) => ({
           ...prev,
-          currentPassword: 'Неверный текущий пароль',
+          currentPassword: 'Invalid current password',
         }));
       } else {
         setErrors((prev) => ({
           ...prev,
-          currentPassword: msg || 'Не удалось сменить пароль',
+          currentPassword: msg || 'An Error to change password',
         }));
       }
     }
@@ -112,6 +112,20 @@ export function ChangePasswordForm({
       )}
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="relative">
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            readOnly
+            style={{
+              position: 'absolute',
+              left: '-9999px',
+              width: '1px',
+              height: '1px',
+              overflow: 'hidden',
+            }}
+          />
+
           <Label htmlFor="currentPassword">Current Password</Label>
           <div className="relative">
             <Input

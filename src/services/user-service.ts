@@ -5,7 +5,7 @@ import type {
   CustomerChangePassword,
 } from '@commercetools/platform-sdk';
 
-import { apiWithExistingTokenFlow } from './build-client';
+import { apiWithExistingTokenFlow, apiWithPasswordFlow } from './build-client';
 
 export async function fetchCustomerRaw(): Promise<Customer> {
   const apiRoot = apiWithExistingTokenFlow();
@@ -43,23 +43,31 @@ export async function countCustomersByEmail(email: string): Promise<number> {
 }
 
 export async function changePasswordService(
-  customerId: string,
-  version: number,
+  userEmail: string,
   currentPassword: string,
   newPassword: string
 ): Promise<Customer> {
-  const apiRoot = apiWithExistingTokenFlow();
+  // 1. Новый API-клиент по логину пользователя:
+  const authRoot = apiWithPasswordFlow(userEmail, currentPassword);
+
+  // 2. Берём профиль, чтобы получить customer.id и customer.version
+  const meResp = await authRoot.me().get().execute();
+  if (!meResp.body) {
+    throw new Error(`Cannot fetch profile (status ${meResp.statusCode})`);
+  }
+  const customer = meResp.body as Customer;
+
+  // 3. Делаем запрос смены пароля в этом же контексте
   const body: CustomerChangePassword = {
-    id: customerId,
-    version,
+    id: customer.id,
+    version: customer.version,
     currentPassword,
     newPassword,
   };
-
-  const resp = await apiRoot.customers().password().post({ body }).execute();
-
+  const resp = await authRoot.customers().password().post({ body }).execute();
   if (!resp.body) {
     throw new Error(`Password change failed (status ${resp.statusCode})`);
   }
+
   return resp.body as Customer;
 }

@@ -210,31 +210,27 @@ export const useUserStore = create<UserStore>((set, get) => ({
     }
   },
 
-  changePassword: async (currentPassword, newPassword): Promise<void> => {
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> => {
     set({ loading: true, error: null });
-    const state = get();
-    if (!state.user) {
-      set({ error: 'Нет пользователя', loading: false });
-      return;
-    }
+    const email = get().user?.email ?? '';
     try {
       const updated = await changePasswordService(
-        state.user.id,
-        state.user.version,
+        email,
         currentPassword,
         newPassword
       );
-      // обновляем в сторе версию и user (можно не менять e-mail/name и т.п.)
       set({
-        user: {
-          ...mapCustomerToUser(updated),
-          version: updated.version,
-        },
+        user: { ...mapCustomerToUser(updated), version: updated.version },
         loading: false,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      set({ error: message, loading: false });
+      set({
+        error: error instanceof Error ? error.message : String(error),
+        loading: false,
+      });
     }
   },
 }));
