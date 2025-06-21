@@ -37,6 +37,7 @@ export function UserInfo({ user }: UserInfoProps): React.JSX.Element {
     Partial<Record<FieldId | 'email' | 'dateOfBirth', string>>
   >({});
   const emailDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   useEffect(() => {
     if (editingUser) {
@@ -100,11 +101,30 @@ export function UserInfo({ user }: UserInfoProps): React.JSX.Element {
     await saveUser(form);
   };
 
+  const handlePasswordSuccess = (): void => {
+    toggleUserEdit();
+    setPasswordChanged(true);
+    setTimeout(() => setPasswordChanged(false), 3000);
+  };
+
   const cardBase =
     'rounded-2xl shadow-lg border border-[#E5E7EB] p-6 mb-6 transition-transform hover:-translate-y-1 bg-gradient-to-br';
 
   return (
-    <div className={`${cardBase} from-white to-green-50`}>
+    <div className={`${cardBase} from-white to-green-50 `}>
+      {passwordChanged && (
+        <div
+          className="
+            fixed top-8 inset-x-0 mx-auto w-max
+            bg-lime-50 border border-seconrary
+            text-primery p-4 rounded-lg shadow-lg
+            animate-fade-in-out
+          "
+        >
+          Password changed successfully.
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold text-primary">Profile</h2>
         <Button variant="link" onClick={toggleUserEdit}>
@@ -113,59 +133,68 @@ export function UserInfo({ user }: UserInfoProps): React.JSX.Element {
       </div>
 
       {editingUser ? (
-        <form noValidate onSubmit={handleSubmit} className="space-y-4">
-          {FIELD_CONFIG.map(({ id, label }) => (
-            <div key={id} className="relative">
-              <Label htmlFor={id}>{label}</Label>
-              <Input
-                id={id}
-                value={(form[id] as string) ?? ''}
-                onChange={handleFieldChange(id)}
+        <>
+          <form noValidate onSubmit={handleSubmit} className="space-y-4">
+            {FIELD_CONFIG.map(({ id, label }) => (
+              <div key={id} className="relative">
+                <Label htmlFor={id}>{label}</Label>
+                <Input
+                  id={id}
+                  value={(form[id] as string) ?? ''}
+                  onChange={handleFieldChange(id)}
+                />
+                {errors[id] && (
+                  <div className="absolute left-0 top-full mt-1">
+                    <Tooltip message={errors[id]} />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div className="relative">
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <BirthdayCalendar
+                name="dateOfBirth"
+                defaultValue={
+                  form.dateOfBirth ? parseLocalDate(form.dateOfBirth) : null
+                }
+                onChange={handleDateChange}
+                required
               />
-              {errors[id] && (
+              {errors.dateOfBirth && (
                 <div className="absolute left-0 top-full mt-1">
-                  <Tooltip message={errors[id]} />
+                  <Tooltip message={errors.dateOfBirth} />
                 </div>
               )}
             </div>
-          ))}
 
-          <div className="relative">
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
-            <BirthdayCalendar
-              name="dateOfBirth"
-              defaultValue={
-                form.dateOfBirth ? parseLocalDate(form.dateOfBirth) : null
-              }
-              onChange={handleDateChange}
-              required
-            />
-            {errors.dateOfBirth && (
-              <div className="absolute left-0 top-full mt-1">
-                <Tooltip message={errors.dateOfBirth} />
-              </div>
-            )}
-          </div>
+            <div className="relative">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={form.email ?? ''}
+                onChange={handleEmailChange}
+              />
+              {errors.email && (
+                <div className="absolute left-0 top-full mt-1">
+                  <Tooltip message={errors.email} />
+                </div>
+              )}
+            </div>
 
-          <div className="relative">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={form.email ?? ''}
-              onChange={handleEmailChange}
-            />
-            {errors.email && (
-              <div className="absolute left-0 top-full mt-1">
-                <Tooltip message={errors.email} />
-              </div>
-            )}
-          </div>
+            <div className="flex justify-end">
+              <Button type="submit">Save</Button>
+            </div>
+          </form>
 
-          <div className="flex justify-end">
-            <Button type="submit">Save</Button>
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold text-primary mb-4">
+              Change Password
+            </h3>
+            <ChangePasswordForm onSuccess={handlePasswordSuccess} />
           </div>
-        </form>
+        </>
       ) : (
         <div className="space-y-2 text-primary">
           <p>
@@ -181,16 +210,6 @@ export function UserInfo({ user }: UserInfoProps): React.JSX.Element {
             <span className="font-medium">Date of Birth:</span>{' '}
             {user.dateOfBirth}
           </p>
-        </div>
-      )}
-
-      {/* Секция смены пароля показывается только если мы в режиме редактирования */}
-      {editingUser && (
-        <div className="mt-8">
-          <h3 className="text-xl font-semibold text-primary mb-4">
-            Change Password
-          </h3>
-          <ChangePasswordForm onSuccess={toggleUserEdit} />
         </div>
       )}
     </div>

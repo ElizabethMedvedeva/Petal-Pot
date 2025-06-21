@@ -10,6 +10,7 @@ import type { PasswordForm } from '@/utils/types';
 import {
   validatePasswordData,
   validateCurrentPassword,
+  clearFieldError,
 } from '@/utils/validations';
 
 interface ChangePasswordFormProps {
@@ -29,7 +30,6 @@ export function ChangePasswordForm({
     confirmPassword: '',
   });
   const [errors, setErrors] = useState<Partial<PasswordForm>>({});
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -62,6 +62,8 @@ export function ChangePasswordForm({
     );
     if (!isValid && error) {
       setErrors((prev) => ({ ...prev, currentPassword: error }));
+    } else {
+      setErrors((prev) => clearFieldError(prev, 'currentPassword'));
     }
   };
 
@@ -74,42 +76,24 @@ export function ChangePasswordForm({
     }
     try {
       await changePassword(form.currentPassword, form.newPassword);
+
+      setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setErrors({});
+
       onSuccess();
     } catch {
-      const msg = useUserStore.getState().error ?? '';
-
-      if (msg.includes('Invalid current password')) {
-        setErrors((prev) => ({
-          ...prev,
-          currentPassword: 'Invalid current password',
-        }));
-      } else {
-        setErrors((prev) => ({
-          ...prev,
-          currentPassword: msg || 'An Error to change password',
-        }));
-      }
+      const msg = useUserStore.getState().error ?? 'Не удалось сменить пароль';
+      setErrors((prev) => ({
+        ...prev,
+        currentPassword: msg.includes('Current password')
+          ? 'Invalid current password'
+          : msg,
+      }));
     }
-
-    setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    setPasswordSuccess(true);
-    onSuccess();
-    setTimeout(() => setPasswordSuccess(false), 3000);
   };
 
   return (
     <>
-      {passwordSuccess && (
-        <div
-          className="
-           bg-green-50 border border-green-200 
-           text-green-800 p-4 rounded-lg 
-           transition-opacity duration-500
-         "
-        >
-          Password changed successfully.
-        </div>
-      )}
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="relative">
           <input

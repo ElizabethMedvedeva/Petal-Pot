@@ -47,17 +47,14 @@ export async function changePasswordService(
   currentPassword: string,
   newPassword: string
 ): Promise<Customer> {
-  // 1. Новый API-клиент по логину пользователя:
   const authRoot = apiWithPasswordFlow(userEmail, currentPassword);
 
-  // 2. Берём профиль, чтобы получить customer.id и customer.version
   const meResp = await authRoot.me().get().execute();
   if (!meResp.body) {
     throw new Error(`Cannot fetch profile (status ${meResp.statusCode})`);
   }
   const customer = meResp.body as Customer;
 
-  // 3. Делаем запрос смены пароля в этом же контексте
   const body: CustomerChangePassword = {
     id: customer.id,
     version: customer.version,
