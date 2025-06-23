@@ -1,18 +1,217 @@
-import type { User } from '@/utils/types';
+import React, { useState, useEffect, useRef, type FormEvent } from 'react';
 
-export function UserInfo({ user }: { user: User }): React.JSX.Element {
+import { ChangePasswordForm } from './change-password';
+
+import { Button } from '@/components/ui/button';
+import { BirthdayCalendar } from '@/components/ui/calendar/birthday';
+import { Tooltip } from '@/components/ui/error-message/error-message';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useUserStore } from '@/store/user-store';
+import type { User, FieldId, ProfileUpdates } from '@/utils/types';
+import {
+  validateProfileData,
+  validateEmail,
+  clearFieldError,
+  type ProfileForm,
+} from '@/utils/validations';
+
+interface UserInfoProps {
+  user: User & { version: number };
+}
+
+const FIELD_CONFIG: Array<{ id: FieldId; label: string }> = [
+  { id: 'firstName', label: 'First Name' },
+  { id: 'lastName', label: 'Last Name' },
+];
+
+function parseLocalDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+export function UserInfo({ user }: UserInfoProps): React.JSX.Element {
+  const { editingUser, toggleUserEdit, saveUser } = useUserStore();
+  const [form, setForm] = useState<ProfileUpdates>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<FieldId | 'email' | 'dateOfBirth', string>>
+  >({});
+  const emailDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [passwordChanged, setPasswordChanged] = useState(false);
+
+  useEffect(() => {
+    if (editingUser) {
+      setForm({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        dateOfBirth: user.dateOfBirth,
+      });
+      setErrors({});
+    }
+  }, [editingUser, user]);
+
+  const handleFieldChange =
+    (field: FieldId): React.ChangeEventHandler<HTMLInputElement> =>
+    (e) => {
+      const v = e.target.value;
+      setForm((f) => ({ ...f, [field]: v }));
+      setErrors((prev) => clearFieldError(prev, field));
+    };
+
+  const handleDateChange = (date: Date | null): void => {
+    if (date) {
+      const iso = [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+        .map((n) => String(n).padStart(2, '0'))
+        .join('-');
+      setForm((f) => ({ ...f, dateOfBirth: iso }));
+      setErrors((prev) => clearFieldError(prev, 'dateOfBirth'));
+    }
+  };
+
+  const handleEmailChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const v = e.target.value;
+    setForm((f) => ({ ...f, email: v }));
+    setErrors((prev) => clearFieldError(prev, 'email'));
+    if (emailDebounce.current) clearTimeout(emailDebounce.current);
+    emailDebounce.current = setTimeout(async () => {
+      const { isValid, error } = await validateEmail(v, user.email);
+      if (!isValid && error) {
+        setErrors((prev) => ({ ...prev, email: error }));
+      }
+    }, 500);
+  };
+
+  const handleSubmit = async (e: FormEvent): Promise<void> => {
+    e.preventDefault();
+    const payload = form as ProfileForm;
+    const { isValid, errors: valErrs } = validateProfileData(payload);
+    if (!isValid) {
+      setErrors(valErrs);
+      return;
+    }
+    const { isValid: emailOk, error: emailErr } = await validateEmail(
+      payload.email,
+      user.email
+    );
+    if (!emailOk && emailErr) {
+      setErrors({ ...valErrs, email: emailErr });
+      return;
+    }
+    await saveUser(form);
+  };
+
+  const handlePasswordSuccess = (): void => {
+    toggleUserEdit();
+    setPasswordChanged(true);
+    setTimeout(() => setPasswordChanged(false), 3000);
+  };
+
+  const cardBase =
+    'rounded-2xl shadow-lg border border-[#E5E7EB] p-6 mb-6 transition-transform hover:-translate-y-1 bg-gradient-to-br';
+
   return (
-    <div className="bg-white rounded-xl shadow p-4 mb-6">
-      <h2 className="text-xl font-semibold mb-2">Personal Information</h2>
-      <p>
-        <strong>First Name:</strong> {user.firstName}
-      </p>
-      <p>
-        <strong>Last Name:</strong> {user.lastName}
-      </p>
-      <p>
-        <strong>Date of Birth:</strong> {user.dateOfBirth}
-      </p>
+    <div className={`${cardBase} from-white to-green-50 `}>
+      {passwordChanged && (
+        <div
+          className="
+            fixed top-8 inset-x-0 mx-auto w-max
+            bg-lime-50 border border-seconrary
+            text-primery p-4 rounded-lg shadow-lg
+            animate-fade-in-out
+          "
+        >
+          Password changed successfully.
+        </div>
+      )}
+
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold text-primary">Profile</h2>
+        <Button variant="link" onClick={toggleUserEdit}>
+          {editingUser ? 'Cancel' : 'Edit'}
+        </Button>
+      </div>
+
+      {editingUser ? (
+        <>
+          <form noValidate onSubmit={handleSubmit} className="space-y-4">
+            {FIELD_CONFIG.map(({ id, label }) => (
+              <div key={id} className="relative">
+                <Label htmlFor={id}>{label}</Label>
+                <Input
+                  id={id}
+                  value={(form[id] as string) ?? ''}
+                  onChange={handleFieldChange(id)}
+                />
+                {errors[id] && (
+                  <div className="absolute left-0 top-full mt-1">
+                    <Tooltip message={errors[id]} />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div className="relative">
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <BirthdayCalendar
+                name="dateOfBirth"
+                defaultValue={
+                  form.dateOfBirth ? parseLocalDate(form.dateOfBirth) : null
+                }
+                onChange={handleDateChange}
+                required
+              />
+              {errors.dateOfBirth && (
+                <div className="absolute left-0 top-full mt-1">
+                  <Tooltip message={errors.dateOfBirth} />
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={form.email ?? ''}
+                onChange={handleEmailChange}
+              />
+              {errors.email && (
+                <div className="absolute left-0 top-full mt-1">
+                  <Tooltip message={errors.email} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit">Save</Button>
+            </div>
+          </form>
+
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold text-primary mb-4">
+              Change Password
+            </h3>
+            <ChangePasswordForm onSuccess={handlePasswordSuccess} />
+          </div>
+        </>
+      ) : (
+        <div className="space-y-2 text-primary">
+          <p>
+            <span className="font-medium">First Name:</span> {user.firstName}
+          </p>
+          <p>
+            <span className="font-medium">Last Name:</span> {user.lastName}
+          </p>
+          <p>
+            <span className="font-medium">Email:</span> {user.email}
+          </p>
+          <p>
+            <span className="font-medium">Date of Birth:</span>{' '}
+            {user.dateOfBirth}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
