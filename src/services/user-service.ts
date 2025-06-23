@@ -2,9 +2,10 @@ import type {
   Customer,
   CustomerUpdate,
   CustomerUpdateAction,
+  CustomerChangePassword,
 } from '@commercetools/platform-sdk';
 
-import { apiWithExistingTokenFlow } from './build-client';
+import { apiWithExistingTokenFlow, apiWithPasswordFlow } from './build-client';
 
 export async function fetchCustomerRaw(): Promise<Customer> {
   const apiRoot = apiWithExistingTokenFlow();
@@ -39,4 +40,31 @@ export async function countCustomersByEmail(email: string): Promise<number> {
     .get({ queryArgs: { where: `email="${email}"` } })
     .execute();
   return resp.body.count ?? 0;
+}
+
+export async function changePasswordService(
+  userEmail: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<Customer> {
+  const authRoot = apiWithPasswordFlow(userEmail, currentPassword);
+
+  const meResp = await authRoot.me().get().execute();
+  if (!meResp.body) {
+    throw new Error(`Cannot fetch profile (status ${meResp.statusCode})`);
+  }
+  const customer = meResp.body as Customer;
+
+  const body: CustomerChangePassword = {
+    id: customer.id,
+    version: customer.version,
+    currentPassword,
+    newPassword,
+  };
+  const resp = await authRoot.customers().password().post({ body }).execute();
+  if (!resp.body) {
+    throw new Error(`Password change failed (status ${resp.statusCode})`);
+  }
+
+  return resp.body as Customer;
 }

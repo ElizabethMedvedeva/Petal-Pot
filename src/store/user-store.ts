@@ -13,6 +13,7 @@ import {
   fetchCustomerRaw,
   patchCustomerRaw,
   countCustomersByEmail,
+  changePasswordService,
 } from '@/services/user-service';
 import type {
   User,
@@ -40,6 +41,8 @@ interface UserStore {
   saveAddress: (updates: AddressUpdates) => Promise<void>;
 
   checkEmailExists: (email: string) => Promise<boolean>;
+
+  changePassword: (current: string, next: string) => Promise<void>;
 }
 
 export const useUserStore = create<UserStore>((set, get) => ({
@@ -204,6 +207,30 @@ export const useUserStore = create<UserStore>((set, get) => ({
       return cnt > 0;
     } catch {
       return false;
+    }
+  },
+
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> => {
+    set({ loading: true, error: null });
+    const email = get().user?.email ?? '';
+    try {
+      const updated = await changePasswordService(
+        email,
+        currentPassword,
+        newPassword
+      );
+      set({
+        user: { ...mapCustomerToUser(updated), version: updated.version },
+        loading: false,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : String(error),
+        loading: false,
+      });
     }
   },
 }));
