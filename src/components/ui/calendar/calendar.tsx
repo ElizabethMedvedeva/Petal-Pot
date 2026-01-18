@@ -1,15 +1,11 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import * as React from 'react';
-import type { DayPickerSingleProps } from 'react-day-picker';
+import type { DayPickerProps } from 'react-day-picker';
 import { DayPicker } from 'react-day-picker';
 
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-interface IconProps extends React.ComponentPropsWithoutRef<'svg'> {
-  className?: string;
-}
-export type CalendarProps = DayPickerSingleProps;
+export type CalendarProps = DayPickerProps;
 
 function Calendar({
   className,
@@ -59,14 +55,6 @@ function Calendar({
           'aria-selected:bg-accent aria-selected:text-accent-foreground',
         day_hidden: 'invisible',
         ...classNames,
-      }}
-      components={{
-        IconLeft: ({ className, ...props }: IconProps) => (
-          <ChevronLeft className={cn('h-4 w-4', className)} {...props} />
-        ),
-        IconRight: ({ className, ...props }: IconProps) => (
-          <ChevronRight className={cn('h-4 w-4', className)} {...props} />
-        ),
       }}
       {...props}
     />
